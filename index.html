@@ -31,10 +31,11 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="farm">Farm</button>
-      <button class="tab-btn" data-tab="upgrades">Upgrades</button>
-      <button class="tab-btn" data-tab="trade">Handel</button>
-      <button class="tab-btn" data-tab="stats">Statistiken</button>
+      <button class="tab-btn active" data-tab="farm">🌿 Farm</button>
+      <button class="tab-btn" data-tab="upgrades">⬆️ Upgrades</button>
+      <button class="tab-btn" data-tab="trade">💼 Handel</button>
+      <button class="tab-btn" data-tab="stats">📊 Statistiken</button>
+      <button class="tab-btn" data-tab="settings">⚙️ Einstellungen</button>
     </nav>
 
     <main>
@@ -56,7 +57,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Grow Room</h2>
+            <h2>🌱 Grow Room</h2>
             <div class="grow-controls">
               <button id="unlockSlotBtn" class="accent">Slot freischalten (Kosten: <span id="unlockCost">—</span>)</button>
               <span class="hint">Slots: <span id="slotCount">0</span>/<span id="slotMax">12</span></span>
@@ -67,7 +68,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Shop: Neue Pflanze</h2>
+            <h2>🛒 Shop: Neue Pflanze</h2>
             <span class="hint">Klicke einen freien Slot oder nutze den Shop</span>
           </div>
           <div id="shop" class="shop-list"></div>
@@ -77,7 +78,7 @@
       <section id="tab-upgrades" class="tab">
         <div class="panel">
           <div class="panel-header">
-            <h2>Globale Upgrades</h2>
+            <h2>✨ Globale Upgrades</h2>
             <span class="hint">Verbessert alle Pflanzen</span>
           </div>
           <div id="globalUpgrades" class="upgrade-list"></div>
@@ -85,7 +86,7 @@
 
         <div class="panel prestige">
           <div class="panel-header">
-            <h2>Prestige: Reinvestieren</h2>
+            <h2>🔁 Prestige: Reinvestieren</h2>
             <span class="hint">Setzt die Farm zurück, erhält Haze-Punkte für schnelleres Wachstum</span>
           </div>
           <div class="prestige-inner">
@@ -102,7 +103,7 @@
       <section id="tab-trade" class="tab">
         <div class="panel">
           <div class="panel-header">
-            <h2>Marktverkauf</h2>
+            <h2>💰 Marktverkauf</h2>
             <span class="hint">Tausche Ertrag (g) gegen Bargeld</span>
           </div>
           <div class="market">
@@ -121,7 +122,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Anfragen</h2>
+            <h2>📩 Anfragen</h2>
             <span class="hint">Zeitlich begrenzte Kaufangebote</span>
           </div>
           <div id="offerList" class="offer-list"></div>
@@ -129,7 +130,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Artikel-Shop</h2>
+            <h2>🧰 Artikel-Shop</h2>
             <span class="hint">Kaufe Ausrüstung mit Bargeld</span>
           </div>
           <div id="itemShop" class="shop-list"></div>
@@ -137,7 +138,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Verbrauchsmaterial</h2>
+            <h2>🧪 Verbrauchsmaterial</h2>
             <span class="hint">Wasser &amp; Dünger nachfüllen</span>
           </div>
           <div class="consumable-list">
@@ -155,12 +156,33 @@
               </div>
               <button class="secondary" id="buyNutrient">Kaufen (€ 7)</button>
             </div>
+            <div class="consumable">
+              <div class="consumable-info">
+                <div class="consumable-name">Pflanzenspray</div>
+                <div class="consumable-desc">Gegen Milben/Thripse · Bestand: <span id="sprayCharges">0</span></div>
+              </div>
+              <button class="secondary" id="buySpray">Kaufen (€ 9)</button>
+            </div>
+            <div class="consumable">
+              <div class="consumable-info">
+                <div class="consumable-name">Fungizid</div>
+                <div class="consumable-desc">Gegen Schimmel · Bestand: <span id="fungicideCharges">0</span></div>
+              </div>
+              <button class="secondary" id="buyFungicide">Kaufen (€ 11)</button>
+            </div>
+            <div class="consumable">
+              <div class="consumable-info">
+                <div class="consumable-name">Nützlinge</div>
+                <div class="consumable-desc">Biologische Abwehr · Bestand: <span id="beneficialCharges">0</span></div>
+              </div>
+              <button class="secondary" id="buyBeneficial">Kaufen (€ 14)</button>
+            </div>
           </div>
         </div>
 
         <div class="panel">
           <div class="panel-header">
-            <h2>Inventar</h2>
+            <h2>🎒 Inventar</h2>
             <span class="hint">Verkaufe Artikel zurück</span>
           </div>
           <div id="inventoryList" class="inventory-list"></div>
@@ -170,7 +192,7 @@
       <section id="tab-stats" class="tab">
         <div class="panel">
           <div class="panel-header">
-            <h2>Statistiken</h2>
+            <h2>📊 Statistiken</h2>
           </div>
           <div class="stats-grid">
             <div class="stat">
@@ -196,13 +218,38 @@
           </div>
         </div>
       </section>
+
+      <section id="tab-settings" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>⚙️ Einstellungen</h2>
+            <span class="hint">Passe Schwierigkeit und Balance an</span>
+          </div>
+          <div class="settings">
+            <div class="settings-row">
+              <div class="label">Schwierigkeitsgrad</div>
+              <div class="chips">
+                <button class="chip" id="diffEasy" data-diff="easy">Leicht</button>
+                <button class="chip" id="diffNormal" data-diff="normal">Normal</button>
+                <button class="chip" id="diffHard" data-diff="hard">Schwer</button>
+              </div>
+            </div>
+            <div class="settings-row small">
+              <div>Wachstum: <span id="diffGrowth">x1.00</span> · Schädlingsrisiko: <span id="diffPest">x1.00</span></div>
+            </div>
+            <div class="settings-row small hint">
+              <div>Hinweis: Änderung wirkt sich sofort auf alle Pflanzen aus.</div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <template id="tpl-plant-card">
       <div class="plant-card">
         <div class="plant-media" data-media>
           <img data-phase-img alt="Pflanzenphase" />
-          <div class="media-fallback" data-media-fallback>🌱</div>
+          <div class="media-fallback" data-media-fallback>--</div>
         </div>
                 <div class="plant-header">
           <div class="plant-left">
@@ -220,7 +267,7 @@
             <span data-yield>0</span> g
           </div>
         </div>
-        <div class="plant-status" data-status>Bereit</div>
+        <div class="pest-badge" data-pest title="Gesund"></div><div class="plant-status" data-status>Bereit</div>
         <div class="progress" title="Wachstum">
           <div class="progress-bar" data-progress style="width: 0%"></div>
         </div>
@@ -231,14 +278,7 @@
           <div class="nutrient-bar" data-nutrient style="width: 0%"></div>
         </div>
         <div class="plant-quality">Qualitaet: <span data-quality>Normal</span></div>
-        <div class="plant-actions">
-          <button class="accent" data-harvest>Ernten</button>
-          <button class="secondary" data-water-btn>Waessern</button>
-          <button class="secondary" data-feed-btn>Duengen</button>
-          <button class="secondary" data-upgrade>Upgrade (Kosten: <span data-upgrade-cost>0</span> g)</button>
-          <button class="ghost danger" data-remove>Entfernen</button>
-        </div>
-        <div class="floating-container" data-fx></div>
+        <div class="plant-actions">\n          <button class="accent" data-harvest>✂️ Ernten</button>\n          <button class="secondary" data-water-btn>💧 Waessern</button>\n          <button class="secondary" data-feed-btn>🧪 Duengen</button>\n          <button class="secondary" data-pest-btn>🛡️ Abwehr</button>\n          <button class="secondary" data-upgrade>⬆️ Upgrade (Kosten: <span data-upgrade-cost>0</span> g)</button>\n          <button class="ghost danger" data-remove>🗑️ Entfernen</button>\n        </div>\n        <div class="floating-container" data-fx></div>
       </div>
     </template>
 
@@ -258,6 +298,10 @@
     <script src="script.js"></script>
   </body>
   </html>
+
+
+
+
 
 
 

@@ -23,12 +23,12 @@
   const STAGE_LABELS = ['Keimphase', 'Vegetativ', 'Vorbluete', 'Bluete', 'Finish'];
 
   const STRAINS = [
-    { id:'gelato', name:'Green Gelato', tag:'GG', cost:50, yield:50, grow:120, desc:'Schnell und aromatisch', base:'assets/plants/greengelato', stages:['wachstum0','wachstum1','wachstum2','wachstum3','wachstum4','ende'] },
-    { id:'zushi',  name:'Blue Zushi',   tag:'BZ', cost:320, yield:90, grow:180, desc:'Frischer Hybrid' },
-    { id:'honey',  name:'Honey Cream',  tag:'HC', cost:540, yield:150, grow:210, desc:'Cremige Indica' },
-    { id:'amnesia',name:'Amnesia Haze', tag:'AH', cost:900, yield:240, grow:260, desc:'Klassische Sativa' },
-    { id:'gorilla',name:'Gorilla Glue', tag:'GL', cost:1500, yield:360, grow:320, desc:'Harzige Power' },
-    { id:'zkittle',name:'Zkittlez',     tag:'ZK', cost:2300, yield:520, grow:360, desc:'Suesser Regenbogen' },
+    { id:'gelato', name:'Green Gelato', tag:'🍃', cost:50, yield:50, grow:120, desc:'Schnell und aromatisch', base:'assets/plants&greengelato', stages:['wachstum0','wachstum1','wachstum2','wachstum3','wachstum4','ende'] },
+    { id:'zushi',  name:'Blue Zushi',   tag:'💙', cost:320, yield:90, grow:180, desc:'Frischer Hybrid' },
+    { id:'honey',  name:'Honey Cream',  tag:'🍯', cost:540, yield:150, grow:210, desc:'Cremige Indica' },
+    { id:'amnesia',name:'Amnesia Haze', tag:'⚡', cost:900, yield:240, grow:260, desc:'Klassische Sativa' },
+    { id:'gorilla',name:'Gorilla Glue', tag:'🦍', cost:1500, yield:360, grow:320, desc:'Harzige Power' },
+    { id:'zkittle',name:'Zkittlez',     tag:'🍬', cost:2300, yield:520, grow:360, desc:'Suesser Regenbogen' },
   ];
 
   const GLOBAL_UPGRADES = [
@@ -47,6 +47,16 @@
     { id:'van', name:'Lieferwagen', icon:'LV', cost:600, desc:'+1 Anfrage, -10s Spawn', effects:{ offerSlot:1, spawnDelta:10 } },
     { id:'trimmer', name:'Trimmer', icon:'TR', cost:500, desc:'+5% Pflanzenertrag', effects:{ yieldMult:1.05 } },
     { id:'filter', name:'Carbon-Filter', icon:'CF', cost:350, desc:'+5% Pflanzenertrag', effects:{ yieldMult:1.05 } },
+    { id:'fan', name:'Ventilator', icon:'VF', cost:220, desc:'Reduziert Schimmelrisiko', effects:{ pestReduce:{ mold:0.6 } } },
+    { id:'dehumidifier', name:'Entfeuchter', icon:'DH', cost:280, desc:'Reduziert Feuchte & Schimmel', effects:{ pestReduce:{ mold:0.5 } } },
+    { id:'sticky_traps', name:'Gelbtafeln', icon:'GT', cost:120, desc:'Reduziert Thripse', effects:{ pestReduce:{ thrips:0.5 } } },
+  ];
+
+  // Pests
+  const PESTS = [
+    { id:'mites', name:'Spinnmilben', icon:'🕷️', base: 0.02, effect:{ growth:0.6, health:-2, quality:-0.01 }, prefers:'dry' },
+    { id:'mold',  name:'Schimmel',    icon:'🦠', base: 0.015, effect:{ growth:0.3, health:-3, quality:-0.03 }, prefers:'wet' },
+    { id:'thrips',name:'Thripse',     icon:'🦟', base: 0.018, effect:{ growth:0.8, health:-1, quality:-0.008 }, prefers:'any' },
   ];
 
   const MAX_SLOTS = 12;
@@ -76,6 +86,13 @@
   const WATER_CONSUMABLE_PRICE = 5;
   const NUTRIENT_CONSUMABLE_PRICE = 7;
 
+  // Difficulties
+  const DIFFICULTIES = {
+    easy:   { name:'Leicht', growth: 1.35, pest: 0.7 },
+    normal: { name:'Normal', growth: 1.15, pest: 1.0 },
+    hard:   { name:'Schwer', growth: 0.95, pest: 1.4 },
+  };
+
   let state = {
     grams:0,
     totalEarned:0,
@@ -84,7 +101,7 @@
     resets:0,
     playtimeSec:0,
     lastTime: Date.now(),
-    slotsUnlocked:1,
+    slotsUnlocked:3,
     plants:[],
     purchasedCount:{},
     upgrades:{},
@@ -95,7 +112,10 @@
     offers:[],
     nextOfferIn:10,
     itemsOwned:{},
-    consumables:{ water:0, nutrient:0 },
+    consumables:{ water:0, nutrient:0, spray:0, fungicide:0, beneficials:0 },
+    difficulty:'normal',
+    marketMult:1,
+    marketTimer:0,
     welcomeRewarded:false
   };
 
@@ -131,14 +151,21 @@
     if(typeof plant.quality !== 'number' || Number.isNaN(plant.quality)) plant.quality = 1;
     plant.quality = clamp(plant.quality, 0.4, 1.5);
     if(typeof plant.readyTime !== 'number' || Number.isNaN(plant.readyTime)) plant.readyTime = 0;
+    if(!plant.pest) plant.pest = null;
   }
 
   function ensureConsumables(){
-    if(!state.consumables) state.consumables = { water:0, nutrient:0 };
+    if(!state.consumables) state.consumables = { water:0, nutrient:0, spray:0, fungicide:0, beneficials:0 };
     if(typeof state.consumables.water !== 'number' || Number.isNaN(state.consumables.water)) state.consumables.water = 0;
     if(typeof state.consumables.nutrient !== 'number' || Number.isNaN(state.consumables.nutrient)) state.consumables.nutrient = 0;
+    if(typeof state.consumables.spray !== 'number' || Number.isNaN(state.consumables.spray)) state.consumables.spray = 0;
+    if(typeof state.consumables.fungicide !== 'number' || Number.isNaN(state.consumables.fungicide)) state.consumables.fungicide = 0;
+    if(typeof state.consumables.beneficials !== 'number' || Number.isNaN(state.consumables.beneficials)) state.consumables.beneficials = 0;
     state.consumables.water = Math.max(0, Math.floor(state.consumables.water));
     state.consumables.nutrient = Math.max(0, Math.floor(state.consumables.nutrient));
+    state.consumables.spray = Math.max(0, Math.floor(state.consumables.spray));
+    state.consumables.fungicide = Math.max(0, Math.floor(state.consumables.fungicide));
+    state.consumables.beneficials = Math.max(0, Math.floor(state.consumables.beneficials));
   }
 
   function slotUnlockCost(current){
@@ -264,7 +291,7 @@
     img.src = path;
   }
 
-  function updatePlantCard(card, plant){
+    function updatePlantCard(card, plant){
     if(!card) return;
     const timerEl = card.querySelector('[data-timer]');
     if(timerEl) timerEl.textContent = formatTimer(timerForPlant(plant));
@@ -286,11 +313,19 @@
     if(waterBar) waterBar.style.width = `${Math.round((plant.water / WATER_MAX) * 100)}%`;
     const nutrientBar = card.querySelector('[data-nutrient]');
     if(nutrientBar) nutrientBar.style.width = `${Math.round((plant.nutrients / NUTRIENT_MAX) * 100)}%`;
+    const pestBadge = card.querySelector('[data-pest]');
+    if(plant.pest){
+      const pest = PESTS.find(p => p.id === plant.pest.id) || {icon:'🐛', name:'Schaedlinge'};
+      const sev = Math.round((plant.pest.sev || 1) * 100);
+      if(pestBadge){ pestBadge.textContent = pest.icon + ' ' + pest.name + ' (' + sev + '%)'; pestBadge.title = 'Befallen'; }
+      card.classList.add('card-alert');
+    } else {
+      if(pestBadge){ pestBadge.textContent = ''; pestBadge.title = 'Gesund'; }
+      card.classList.remove('card-alert');
+    }
     setPlantMedia(card, plant);
     setActionStates(card, plant);
-  }
-
-  function plantUpgradeCost(plant){
+  }function plantUpgradeCost(plant){
     const strain = getStrain(plant.strainId);
     return Math.round(strain.cost * Math.pow(1.15, plant.level));
   }
@@ -306,7 +341,9 @@
       ensurePlantDefaults(plant);
       if(plant.growProg >= 1 || plant.health <= 0) return sum;
       const slow = (plant.water <= 0 || plant.nutrients <= 0) ? 0.25 : 1;
-      return sum + (harvestYieldFor(plant) * qualityMultiplier(plant) / growTimeFor(plant)) * slow;
+      const d = DIFFICULTIES[state.difficulty] || DIFFICULTIES.normal;
+      const effTime = growTimeFor(plant) / (d.growth || 1);
+      return sum + (harvestYieldFor(plant) * qualityMultiplier(plant) / effTime) * slow;
     }, 0);
   }
 
@@ -349,7 +386,8 @@
       const goodWater = waterRatio >= 0.4 && waterRatio <= 0.85;
       const goodNutrient = nutrientRatio >= 0.4 && nutrientRatio <= 0.8;
 
-      let growthFactor = 1;
+      const d = DIFFICULTIES[state.difficulty] || DIFFICULTIES.normal;
+      let growthFactor = d.growth;
       let healthDelta = 0;
       let qualityDelta = 0;
 
@@ -384,6 +422,18 @@
       }
 
       if(plant.health < 40) growthFactor *= 0.6;
+
+      // Pests: increase severity over time and apply penalties
+      if(!plant.pest){
+        maybeSpawnPestFor(plant, step, waterRatio, nutrientRatio);
+      } else {
+        const pestDef = PESTS.find(p=>p.id===plant.pest.id) || PESTS[0];
+        const sev = plant.pest.sev || 1; // 1..3 scale
+        growthFactor *= Math.max(0.2, (pestDef.effect.growth || 1));
+        healthDelta += (pestDef.effect.health || 0) * (0.5 + 0.5*sev) * step;
+        qualityDelta += (pestDef.effect.quality || 0) * (0.5 + 0.5*sev) * step;
+        plant.pest.sev = Math.min(3, sev + 0.04 * step);
+      }
       if(plant.health > 85 && goodWater && goodNutrient) growthFactor *= 1.1;
 
       if(plant.growProg < 1){
@@ -411,6 +461,35 @@
 
       remaining -= step;
     }
+  }
+
+  function maybeSpawnPestFor(plant, dt, waterRatio, nutrientRatio){
+    // base risk modified by conditions and owned items
+    const d = DIFFICULTIES[state.difficulty] || DIFFICULTIES.normal;
+    const mods = pestRiskModifiers();
+    for(const pest of PESTS){
+      let risk = pest.base * dt * (d.pest || 1); // per second base
+      if(pest.prefers === 'dry' && waterRatio < 0.35) risk *= 3;
+      if(pest.prefers === 'wet' && waterRatio > 0.85) risk *= 3.5;
+      if(nutrientRatio < 0.25) risk *= 1.3;
+      if(mods[pest.id]) risk *= mods[pest.id];
+      if(Math.random() < risk){
+        plant.pest = { id: pest.id, sev: 1 };
+        break;
+      }
+    }
+  }
+
+  function pestRiskModifiers(){
+    const m = { mites:1, mold:1, thrips:1 };
+    for(const it of ITEMS){
+      const own = state.itemsOwned[it.id] || 0;
+      if(!own || !it.effects || !it.effects.pestReduce) continue;
+      for(const key of Object.keys(it.effects.pestReduce)){
+        m[key] = m[key] * Math.pow(it.effects.pestReduce[key], own);
+      }
+    }
+    return m;
   }
 
   function applyOfflineProgress(){
@@ -458,8 +537,20 @@
   const nutrientChargesEl = $('#nutrientCharges');
   const buyWaterBtn = $('#buyWater');
   const buyNutrientBtn = $('#buyNutrient');
+  const sprayChargesEl = $('#sprayCharges');
+  const fungicideChargesEl = $('#fungicideCharges');
+  const beneficialChargesEl = $('#beneficialCharges');
+  const buySprayBtn = $('#buySpray');
+  const buyFungicideBtn = $('#buyFungicide');
+  const buyBeneficialBtn = $('#buyBeneficial');
   const welcomeModal = $('#welcomeModal');
   const welcomeOk = $('#welcomeOk');
+  // Settings
+  const diffEasy = $('#diffEasy');
+  const diffNormal = $('#diffNormal');
+  const diffHard = $('#diffHard');
+  const diffGrowth = $('#diffGrowth');
+  const diffPest = $('#diffPest');
 
   if(slotMaxEl) slotMaxEl.textContent = MAX_SLOTS;
 
@@ -477,6 +568,7 @@
     perSecEls.forEach(el => { if(el) el.textContent = perSecText; });
     if(cashEl) cashEl.textContent = fmtMoney(state.cash);
     prestigeEls.points.textContent = String(state.hazePoints);
+    renderConsumables();
   }
 
   function renderStats(){
@@ -491,6 +583,11 @@
     if(playtimeEl) playtimeEl.textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
   function renderSlots(){
+    // Auto-adjust visible slots: start with 3, always keep one extra free slot up to MAX_SLOTS
+    const minSlots = 3;
+    const target = Math.min(MAX_SLOTS, Math.max(minSlots, (state.plants?.length || 0) + 1));
+    if(state.slotsUnlocked < target) state.slotsUnlocked = target;
+
     slotsEl.innerHTML = '';
     const unlocked = state.slotsUnlocked;
     for(let i = 0; i < unlocked; i++){
@@ -511,6 +608,8 @@
         card.querySelector('[data-harvest]').addEventListener('click', () => harvestPlant(i));
         card.querySelector('[data-water-btn]').addEventListener('click', () => waterPlant(i));
         card.querySelector('[data-feed-btn]').addEventListener('click', () => feedPlant(i));
+        const pb = card.querySelector('[data-pest-btn]');
+        if(pb) pb.addEventListener('click', () => treatPlant(i));
         cell.appendChild(card);
       }else{
         cell.classList.add('center');
@@ -591,7 +690,7 @@
   }
 
   function renderTrade(){
-    const base = BASE_PRICE_PER_G;
+    const base = BASE_PRICE_PER_G * (state.marketMult || 1);
     const mult = itemPriceMultiplier();
     if(basePriceEl) basePriceEl.textContent = fmtMoney(base) + '/g';
     if(saleMultEl) saleMultEl.textContent = 'x' + mult.toFixed(2);
@@ -659,6 +758,9 @@
     ensureConsumables();
     if(waterChargesEl) waterChargesEl.textContent = String(state.consumables.water || 0);
     if(nutrientChargesEl) nutrientChargesEl.textContent = String(state.consumables.nutrient || 0);
+    if(sprayChargesEl) sprayChargesEl.textContent = String(state.consumables.spray || 0);
+    if(fungicideChargesEl) fungicideChargesEl.textContent = String(state.consumables.fungicide || 0);
+    if(beneficialChargesEl) beneficialChargesEl.textContent = String(state.consumables.beneficials || 0);
     if(buyWaterBtn){
       buyWaterBtn.disabled = state.cash < WATER_CONSUMABLE_PRICE;
       buyWaterBtn.textContent = `Kaufen (€ ${WATER_CONSUMABLE_PRICE})`;
@@ -667,6 +769,29 @@
       buyNutrientBtn.disabled = state.cash < NUTRIENT_CONSUMABLE_PRICE;
       buyNutrientBtn.textContent = `Kaufen (€ ${NUTRIENT_CONSUMABLE_PRICE})`;
     }
+    if(buySprayBtn){ buySprayBtn.disabled = state.cash < 9; buySprayBtn.textContent = 'Kaufen (€ 9)'; }
+    if(buyFungicideBtn){ buyFungicideBtn.disabled = state.cash < 11; buyFungicideBtn.textContent = 'Kaufen (€ 11)'; }
+    if(buyBeneficialBtn){ buyBeneficialBtn.disabled = state.cash < 14; buyBeneficialBtn.textContent = 'Kaufen (€ 14)'; }
+  }
+
+  function buyConsumable(type){
+    ensureConsumables();
+    let price = 0;
+    if(type === 'water') price = WATER_CONSUMABLE_PRICE;
+    else if(type === 'nutrient') price = NUTRIENT_CONSUMABLE_PRICE;
+    else if(type === 'spray') price = 9;
+    else if(type === 'fungicide') price = 11;
+    else if(type === 'beneficial') price = 14;
+    if(state.cash < price){ showToast('Nicht genug Bargeld.'); return; }
+    state.cash -= price;
+    if(type === 'water') state.consumables.water += 1;
+    else if(type === 'nutrient') state.consumables.nutrient += 1;
+    else if(type === 'spray') state.consumables.spray += 1;
+    else if(type === 'fungicide') state.consumables.fungicide += 1;
+    else if(type === 'beneficial') state.consumables.beneficials += 1;
+    renderResources();
+    updateProgressBars();
+    save();
   }
 
   function renderInventory(){
@@ -753,6 +878,7 @@
     plant.water = Math.max(0, plant.water - 10);
     plant.quality = clamp(plant.quality - 0.05, 0.4, 1.5);
     spawnFloat(slotIndex, `+${fmt(gain)} g`);
+    spawnBurst(slotIndex, '🍃', 7);
     renderResources();
     updateProgressBars();
     save();
@@ -761,12 +887,12 @@
   function waterPlant(slotIndex){
     const plant = state.plants.find(p => p.slot === slotIndex);
     if(!plant) return;
-    if((state.itemsOwned['watering_can'] || 0) <= 0){ showToast('Giesskanne erforderlich.'); return; }
     ensureConsumables();
     if(state.consumables.water <= 0){ showToast('Kein Wasserkanister verfügbar.'); return; }
     state.consumables.water -= 1;
     plant.water = Math.min(WATER_MAX, plant.water + WATER_ADD_AMOUNT);
     updateProgressBars();
+    spawnBurst(slotIndex, '💧', 4);
     renderConsumables();
     save();
   }
@@ -774,12 +900,39 @@
   function feedPlant(slotIndex){
     const plant = state.plants.find(p => p.slot === slotIndex);
     if(!plant) return;
-    if((state.itemsOwned['nutrients'] || 0) <= 0){ showToast('Duenger-Set erforderlich.'); return; }
     ensureConsumables();
     if(state.consumables.nutrient <= 0){ showToast('Kein Düngerpaket verfügbar.'); return; }
     state.consumables.nutrient -= 1;
     plant.nutrients = Math.min(NUTRIENT_MAX, plant.nutrients + NUTRIENT_ADD_AMOUNT);
     plant.quality = clamp(plant.quality + 0.04, 0.4, 1.5);
+    updateProgressBars();
+    spawnBurst(slotIndex, '🧪', 4);
+    renderConsumables();
+    save();
+  }
+
+  function treatPlant(slotIndex){
+    const plant = state.plants.find(p => p.slot === slotIndex);
+    if(!plant || !plant.pest){ showToast('Keine Schädlinge vorhanden.'); return; }
+    ensureConsumables();
+    const type = plant.pest.id;
+    if(type === 'mold'){
+      if(state.consumables.fungicide > 0){
+        state.consumables.fungicide -= 1;
+        plant.pest = null;
+        spawnBurst(slotIndex, '🛡️', 6);
+      } else { showToast('Fungizid benötigt.'); return; }
+    } else if(type === 'mites' || type === 'thrips'){
+      if(state.consumables.spray > 0){
+        state.consumables.spray -= 1;
+        plant.pest = null;
+        spawnBurst(slotIndex, '🛡️', 6);
+      } else if(state.consumables.beneficials > 0){
+        state.consumables.beneficials -= 1;
+        plant.pest = null;
+        spawnBurst(slotIndex, '🪲', 6);
+      } else { showToast('Keine Abwehr vorhanden.'); return; }
+    }
     updateProgressBars();
     renderConsumables();
     save();
@@ -911,7 +1064,7 @@
       resets:(state.resets||0)+1,
       playtimeSec:0,
       lastTime: Date.now(),
-      slotsUnlocked:1,
+      slotsUnlocked:3,
       plants:[],
       purchasedCount:{},
       upgrades:{},
@@ -934,21 +1087,18 @@
     const harvestBtn = card.querySelector('[data-harvest]');
     const waterBtn = card.querySelector('[data-water-btn]');
     const feedBtn = card.querySelector('[data-feed-btn]');
+    const pestBtn = card.querySelector('[data-pest-btn]');
     const hasShears = (state.itemsOwned['shears'] || 0) > 0;
-    const hasCan = (state.itemsOwned['watering_can'] || 0) > 0;
-    const hasNutrient = (state.itemsOwned['nutrients'] || 0) > 0;
     ensureConsumables();
     const waterCharges = state.consumables.water || 0;
     const nutrientCharges = state.consumables.nutrient || 0;
+    const anyPestCharges = (state.consumables.spray||0) + (state.consumables.fungicide||0) + (state.consumables.beneficials||0);
     if(harvestBtn){
       harvestBtn.disabled = !(plant.growProg >= 1 && hasShears && plant.health > 0);
       harvestBtn.title = harvestBtn.disabled ? 'Ernte erfordert Schere und reife Pflanze' : 'Ernten';
     }
     if(waterBtn){
-      if(!hasCan) {
-        waterBtn.disabled = true;
-        waterBtn.title = 'Giesskanne erforderlich';
-      }else if(waterCharges <= 0){
+      if(waterCharges <= 0){
         waterBtn.disabled = true;
         waterBtn.title = 'Kein Wasserkanister – im Handel kaufen';
       }else{
@@ -957,16 +1107,18 @@
       }
     }
     if(feedBtn){
-      if(!hasNutrient){
-        feedBtn.disabled = true;
-        feedBtn.title = 'Duenger-Set erforderlich';
-      }else if(nutrientCharges <= 0){
+      if(nutrientCharges <= 0){
         feedBtn.disabled = true;
         feedBtn.title = 'Kein Düngerpaket – im Handel kaufen';
       }else{
         feedBtn.disabled = false;
         feedBtn.title = `Duengen (Pakete: ${nutrientCharges})`;
       }
+    }
+    if(pestBtn){
+      const infected = !!plant.pest;
+      pestBtn.disabled = !(infected && anyPestCharges > 0);
+      pestBtn.title = infected ? (anyPestCharges>0 ? 'Abwehr einsetzen' : 'Keine Abwehr vorrätig') : 'Keine Schädlinge';
     }
   }
 
@@ -993,6 +1145,25 @@
     setTimeout(() => el.remove(), 900);
   }
 
+  function spawnBurst(slotIndex, symbol='🍃', count=6){
+    const card = $(`#slots .plant-card[data-slot="${slotIndex}"]`);
+    if(!card) return;
+    const fx = card.querySelector('[data-fx]');
+    if(!fx) return;
+    for(let i=0;i<count;i++){
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = symbol;
+      p.style.left = '50%';
+      p.style.top = '46%';
+      const dx = (Math.random()*28 - 14).toFixed(1) + 'px';
+      p.style.setProperty('--dx', dx);
+      p.style.animationDelay = (i*0.03)+'s';
+      fx.appendChild(p);
+      setTimeout(()=> p.remove(), 1300);
+    }
+  }
+
   function renderAll(){
     renderSlots();
     renderShop();
@@ -1000,6 +1171,7 @@
     renderUpgrades();
     renderStats();
     renderTrade();
+    renderSettings();
     if(unlockCostEl) unlockCostEl.textContent = state.slotsUnlocked >= MAX_SLOTS ? 'max' : fmt(slotUnlockCost(state.slotsUnlocked));
   }
 
@@ -1027,6 +1199,7 @@
         const panel = document.querySelector(`#tab-${id}`);
         if(panel) panel.classList.add('active');
         if(id === 'trade') renderTrade();
+        if(id === 'settings') renderSettings();
       });
     });
   }
@@ -1100,6 +1273,25 @@
     requestAnimationFrame(loop);
   }
 
+  function renderSettings(){
+    const d = DIFFICULTIES[state.difficulty] || DIFFICULTIES.normal;
+    if(diffGrowth) diffGrowth.textContent = 'x' + (d.growth || 1).toFixed(2);
+    if(diffPest) diffPest.textContent = 'x' + (d.pest || 1).toFixed(2);
+    $$('.chip').forEach(el => el.classList.remove('active'));
+    const cur = state.difficulty;
+    if(cur === 'easy' && diffEasy) diffEasy.classList.add('active');
+    if(cur === 'normal' && diffNormal) diffNormal.classList.add('active');
+    if(cur === 'hard' && diffHard) diffHard.classList.add('active');
+  }
+
+  function setDifficulty(mode){
+    if(!DIFFICULTIES[mode]) return;
+    state.difficulty = mode;
+    renderSettings();
+    showToast('Schwierigkeit: ' + DIFFICULTIES[mode].name);
+    save();
+  }
+
   function bindGlobal(){
     if(unlockBtn) unlockBtn.addEventListener('click', unlockSlot);
     const prestigeBtn = $('#prestigeBtn');
@@ -1107,6 +1299,14 @@
     if(sell10Btn) sell10Btn.addEventListener('click', () => quickSell(10));
     if(sell100Btn) sell100Btn.addEventListener('click', () => quickSell(100));
     if(sellMaxBtn) sellMaxBtn.addEventListener('click', () => quickSell(Math.floor(state.grams * 0.5)));
+    if(buyWaterBtn) buyWaterBtn.addEventListener('click', () => buyConsumable('water'));
+    if(buyNutrientBtn) buyNutrientBtn.addEventListener('click', () => buyConsumable('nutrient'));
+    if(buySprayBtn) buySprayBtn.addEventListener('click', () => buyConsumable('spray'));
+    if(buyFungicideBtn) buyFungicideBtn.addEventListener('click', () => buyConsumable('fungicide'));
+    if(buyBeneficialBtn) buyBeneficialBtn.addEventListener('click', () => buyConsumable('beneficial'));
+    if(diffEasy) diffEasy.addEventListener('click', () => setDifficulty('easy'));
+    if(diffNormal) diffNormal.addEventListener('click', () => setDifficulty('normal'));
+    if(diffHard) diffHard.addEventListener('click', () => setDifficulty('hard'));
     setInterval(renderStats, 1000);
   }
 
@@ -1120,6 +1320,7 @@
     bindGlobal();
     renderAll();
     maybeWelcome();
+    renderSettings();
     requestAnimationFrame(ts => {
       lastTick = ts;
       requestAnimationFrame(loop);
@@ -1129,4 +1330,8 @@
 
   start();
 })();
+
+
+
+
 
