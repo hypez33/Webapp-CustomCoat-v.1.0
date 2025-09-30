@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cannabis Idle Farm</title>
+    <meta name="description" content="Ein leichtgewichtiges Idle-Webgame im Cannabis-Farm-Stil." />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="title-wrap">
+        <span class="logo">🍃</span>
+        <h1>Cannabis Idle Farm</h1>
+      </div>
+      <div class="header-right">
+        <div class="stat-pill" title="Aktueller Kontostand">
+          <span id="grams">0.00 g</span>
+        </div>
+        <div class="stat-pill" title="Produktion pro Sekunde">
+          <span id="perSec">0.00 g/s</span>
+        </div>
+        <div class="stat-pill" title="Bargeld">
+          <span id="cash">€ 0</span>
+        </div>
+        <label class="toggle">
+          <input id="themeToggle" type="checkbox" />
+          <span class="slider" title="Dark Mode umschalten"></span>
+        </label>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="farm">Farm</button>
+      <button class="tab-btn" data-tab="upgrades">Upgrades</button>
+      <button class="tab-btn" data-tab="trade">Handel</button>
+      <button class="tab-btn" data-tab="stats">Statistiken</button>
+    </nav>
+
+    <main>
+      <section id="tab-farm" class="tab active">
+        <div class="row summary">
+          <div class="summary-item">
+            <div class="label">Konto</div>
+            <div class="value" id="gramsBig">0.00 g</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">Produktion</div>
+            <div class="value" id="perSecBig">0.00 g/s</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">Haze-Punkte</div>
+            <div class="value" id="prestigePoints">0</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Grow Room</h2>
+            <div class="grow-controls">
+              <button id="unlockSlotBtn" class="accent">Slot freischalten (Kosten: <span id="unlockCost">—</span>)</button>
+              <span class="hint">Slots: <span id="slotCount">0</span>/<span id="slotMax">12</span></span>
+            </div>
+          </div>
+          <div id="slots" class="slots"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Shop: Neue Pflanze</h2>
+            <span class="hint">Klicke einen freien Slot oder nutze den Shop</span>
+          </div>
+          <div id="shop" class="shop-list"></div>
+        </div>
+      </section>
+
+      <section id="tab-upgrades" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Globale Upgrades</h2>
+            <span class="hint">Verbessert alle Pflanzen</span>
+          </div>
+          <div id="globalUpgrades" class="upgrade-list"></div>
+        </div>
+
+        <div class="panel prestige">
+          <div class="panel-header">
+            <h2>Prestige: Reinvestieren</h2>
+            <span class="hint">Setzt die Farm zurück, erhält Haze-Punkte für schnelleres Wachstum</span>
+          </div>
+          <div class="prestige-inner">
+            <div class="prestige-stats">
+              <div>Haze-Punkte: <strong id="prestigeOwned">0</strong></div>
+              <div>Nächster Gewinn: <strong id="prestigeGain">0</strong></div>
+              <div>Bonus: <strong id="prestigeBonus">x1.00</strong></div>
+            </div>
+            <button id="prestigeBtn" class="danger">Reinvestieren (Zurücksetzen)</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-trade" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Marktverkauf</h2>
+            <span class="hint">Tausche Ertrag (g) gegen Bargeld</span>
+          </div>
+          <div class="market">
+            <div class="market-row">
+              <div>Basispreis: <strong id="basePrice">€ 2.00/g</strong></div>
+              <div>Bonus: <strong id="saleMult">x1.00</strong></div>
+              <div>Effektiver Preis: <strong id="effectivePrice">€ 2.00/g</strong></div>
+            </div>
+            <div class="market-actions">
+              <button id="sell10" class="secondary">10 g verkaufen</button>
+              <button id="sell100" class="secondary">100 g verkaufen</button>
+              <button id="sellMax" class="accent">50% verkaufen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Anfragen</h2>
+            <span class="hint">Zeitlich begrenzte Kaufangebote</span>
+          </div>
+          <div id="offerList" class="offer-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Artikel-Shop</h2>
+            <span class="hint">Kaufe Ausrüstung mit Bargeld</span>
+          </div>
+          <div id="itemShop" class="shop-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Verbrauchsmaterial</h2>
+            <span class="hint">Wasser &amp; Dünger nachfüllen</span>
+          </div>
+          <div class="consumable-list">
+            <div class="consumable">
+              <div class="consumable-info">
+                <div class="consumable-name">Wasserkanister</div>
+                <div class="consumable-desc">Füllt eine Pflanze vollständig · Bestand: <span id="waterCharges">0</span></div>
+              </div>
+              <button class="secondary" id="buyWater">Kaufen (€ 5)</button>
+            </div>
+            <div class="consumable">
+              <div class="consumable-info">
+                <div class="consumable-name">Düngerpaket</div>
+                <div class="consumable-desc">Hebt Qualität leicht · Bestand: <span id="nutrientCharges">0</span></div>
+              </div>
+              <button class="secondary" id="buyNutrient">Kaufen (€ 7)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Inventar</h2>
+            <span class="hint">Verkaufe Artikel zurück</span>
+          </div>
+          <div id="inventoryList" class="inventory-list"></div>
+        </div>
+      </section>
+
+      <section id="tab-stats" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Statistiken</h2>
+          </div>
+          <div class="stats-grid">
+            <div class="stat">
+              <div class="label">Lebenszeit-Ertrag</div>
+              <div class="value" id="lifetimeTotal">0.00 g</div>
+            </div>
+            <div class="stat">
+              <div class="label">Beste Produktion</div>
+              <div class="value" id="bestPerSec">0.00 g/s</div>
+            </div>
+            <div class="stat">
+              <div class="label">Pflanzen gesamt</div>
+              <div class="value" id="plantCount">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Spielzeit</div>
+              <div class="value" id="playtime">0:00:00</div>
+            </div>
+            <div class="stat">
+              <div class="label">Resets</div>
+              <div class="value" id="resetCount">0</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="tpl-plant-card">
+      <div class="plant-card">
+        <div class="plant-media" data-media>
+          <img data-phase-img alt="Pflanzenphase" />
+          <div class="media-fallback" data-media-fallback>🌱</div>
+        </div>
+                <div class="plant-header">
+          <div class="plant-left">
+            <div class="plant-icon" data-icon>--</div>
+            <div>
+              <div class="plant-name" data-name>Strain</div>
+              <div class="plant-level">Level <span data-level>1</span></div>
+            </div>
+          </div>
+          <div class="plant-meta">
+            <div class="plant-timer" title="Zeit bis Ernte">Timer <span data-timer>--:--</span></div>
+            <div class="plant-health">Vitalitaet <span data-health>100%</span></div>
+          </div>
+          <div class="plant-prod" title="Ertrag je Ernte">
+            <span data-yield>0</span> g
+          </div>
+        </div>
+        <div class="plant-status" data-status>Bereit</div>
+        <div class="progress" title="Wachstum">
+          <div class="progress-bar" data-progress style="width: 0%"></div>
+        </div>
+        <div class="water" title="Wasserstand">
+          <div class="water-bar" data-water style="width: 0%"></div>
+        </div>
+        <div class="nutrients" title="Naehrstofflevel">
+          <div class="nutrient-bar" data-nutrient style="width: 0%"></div>
+        </div>
+        <div class="plant-quality">Qualitaet: <span data-quality>Normal</span></div>
+        <div class="plant-actions">
+          <button class="accent" data-harvest>Ernten</button>
+          <button class="secondary" data-water-btn>Waessern</button>
+          <button class="secondary" data-feed-btn>Duengen</button>
+          <button class="secondary" data-upgrade>Upgrade (Kosten: <span data-upgrade-cost>0</span> g)</button>
+          <button class="ghost danger" data-remove>Entfernen</button>
+        </div>
+        <div class="floating-container" data-fx></div>
+      </div>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeText" hidden>
+      <div class="modal-card">
+        <h3 id="welcomeTitle">Willkommen im Spiel!</h3>
+        <p id="welcomeText">Willkommen im Spiel, du armer Sack. Hier sind ein paar Groschen – mach was draus! Du erhältst <strong>€ 100</strong> Startkapital.</p>
+        <div class="modal-actions">
+          <button id="welcomeOk" class="accent">Los geht’s</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+  </html>
+
+
+
+
+
+
