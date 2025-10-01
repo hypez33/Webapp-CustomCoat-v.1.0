@@ -1318,6 +1318,84 @@
     });
   }
 
+  // Orders (NPC-Aufträge)
+  function renderOrders(){
+    const container = document.getElementById('ordersList');
+    if(!container) return;
+    container.innerHTML = '';
+    const now = Date.now();
+    state.orders = state.orders.filter(o => o.expiresAt > now);
+    for(const o of state.orders){
+      const strain = getStrain(o.strainId);
+      const total = o.grams * o.pricePerG;
+      const node = document.createElement('div');
+      node.className = 'offer';
+      node.innerHTML = `
+        <div class="offer-left">
+          <div class="offer-qty">${o.grams} g</div>
+          <div>
+            <div>${strain.name} · Preis: <strong>${fmtMoney(o.pricePerG)}</strong> · Gesamt: <strong>${fmtMoney(total)}</strong></div>
+            <div class="offer-meta">Auftrag #${o.id}</div>
+          </div>
+        </div>
+        <div class="offer-right">
+          <div class="offer-timer" data-order="${o.id}">--s</div>
+          <button class="accent" data-deliver="${o.id}">Liefern</button>
+        </div>
+      `;
+      node.querySelector('[data-deliver]').addEventListener('click', () => deliverOrder(o.id));
+      container.appendChild(node);
+    }
+  }
+
+  function updateOrderTimers(){
+    const now = Date.now();
+    const before = state.orders.length;
+    state.orders = state.orders.filter(o => o.expiresAt > now);
+    if(before !== state.orders.length) renderOrders();
+    document.querySelectorAll('#ordersList [data-order]')?.forEach(el => {
+      const id = Number(el.getAttribute('data-order'));
+      const o = state.orders.find(x=>x.id===id);
+      if(!o){ el.textContent = 'abgelaufen'; return; }
+      const sec = Math.max(0, Math.ceil((o.expiresAt - now)/1000));
+      el.textContent = `${sec}s`;
+    });
+  }
+
+  function spawnOrder(){
+    const strain = STRAINS[Math.floor(Math.random()*STRAINS.length)];
+    const base = BASE_PRICE_PER_G * (state.marketMult || 1);
+    const pricePerG = parseFloat((base * (1.2 + Math.random()*0.6)).toFixed(2));
+    const grams = Math.floor(50 + Math.random()*250);
+    const ttl = 120 + Math.floor(Math.random()*240);
+    const id = Math.floor(Math.random()*1e6);
+    state.orders.push({ id, strainId: strain.id, grams, pricePerG, expiresAt: Date.now()+ttl*1000 });
+  }
+
+  function deliverOrder(id){
+    const idx = state.orders.findIndex(o=>o.id===id);
+    if(idx===-1) return;
+    const o = state.orders[idx];
+    if(state.grams < o.grams){ showToast('Nicht genug Ertrag für diesen Auftrag.'); return; }
+    // apply quality multiplier like offers
+    const avgQ = (state.qualityPool.grams||0) > 0 ? (state.qualityPool.weighted/state.qualityPool.grams) : 1;
+    const qMult = saleQualityMultiplier(avgQ);
+    const total = o.grams * o.pricePerG * qMult;
+    state.grams -= o.grams;
+    const usedWeighted = Math.min(state.qualityPool.weighted||0, avgQ * o.grams);
+    state.qualityPool.grams = Math.max(0, (state.qualityPool.grams||0) - o.grams);
+    state.qualityPool.weighted = Math.max(0, (state.qualityPool.weighted||0) - usedWeighted);
+    state.cash += total;
+    state.totalCashEarned += total;
+    state.tradesDone += 1;
+    state.reputation = (state.reputation||0) + 1;
+    state.orders.splice(idx,1);
+    renderResources();
+    renderTrade();
+    save();
+    showToast(`Auftrag erfüllt: ${o.grams} g ${getStrain(o.strainId).name}`);
+  }
+
   function initTabs(){
     $$('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1390,7 +1468,16 @@
       renderOffers();
     }
 
+    // Orders spawn
+    state.nextOrderIn -= dt;
+    if(state.nextOrderIn <= 0){
+      if((state.orders?.length||0) < 3) spawnOrder();
+      state.nextOrderIn = 90 + Math.random()*120;
+      renderOrders();
+    }
+
     updateOfferTimers();
+    updateOrderTimers();
     updateProgressBars();
     renderResources();
 
