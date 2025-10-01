@@ -31,11 +31,12 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="farm">🌿 Farm</button>
-      <button class="tab-btn" data-tab="upgrades">⬆️ Upgrades</button>
-      <button class="tab-btn" data-tab="trade">💼 Handel</button>
-      <button class="tab-btn" data-tab="stats">📊 Statistiken</button>
-      <button class="tab-btn" data-tab="settings">⚙️ Einstellungen</button>
+      <button class="tab-btn active" data-tab="farm">Farm</button>
+      <button class="tab-btn" data-tab="upgrades">Upgrades</button>
+      <button class="tab-btn" data-tab="research">Forschung</button>
+      <button class="tab-btn" data-tab="trade">Handel</button>
+      <button class="tab-btn" data-tab="stats">Statistiken</button>
+      <button class="tab-btn" data-tab="settings">Einstellungen</button>
     </nav>
 
     <main>
@@ -100,17 +101,18 @@
         </div>
       </section>
 
-      <section id="tab-trade" class="tab">
+            <section id="tab-trade" class="tab">
         <div class="panel">
           <div class="panel-header">
-            <h2>💰 Marktverkauf</h2>
+            <h2>Marktverkauf</h2>
             <span class="hint">Tausche Ertrag (g) gegen Bargeld</span>
           </div>
           <div class="market">
             <div class="market-row">
-              <div>Basispreis: <strong id="basePrice">€ 2.00/g</strong></div>
+              <div>Basispreis: <strong id="basePrice">EUR 2.00/g</strong></div>
               <div>Bonus: <strong id="saleMult">x1.00</strong></div>
-              <div>Effektiver Preis: <strong id="effectivePrice">€ 2.00/g</strong></div>
+              <div>Qualität: <strong id="qualityMult">x1.00</strong></div>
+              <div>Effektiver Preis: <strong id="effectivePrice">EUR 2.00/g</strong></div>
             </div>
             <div class="market-actions">
               <button id="sell10" class="secondary">10 g verkaufen</button>
@@ -122,7 +124,15 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>📩 Anfragen</h2>
+            <h2>NPC-Aufträge</h2>
+            <span class="hint">Spezielle Lieferanfragen mit Bonus</span>
+          </div>
+          <div id="ordersList" class="offer-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Anfragen</h2>
             <span class="hint">Zeitlich begrenzte Kaufangebote</span>
           </div>
           <div id="offerList" class="offer-list"></div>
@@ -130,7 +140,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>🧰 Artikel-Shop</h2>
+            <h2>Artikel-Shop</h2>
             <span class="hint">Kaufe Ausrüstung mit Bargeld</span>
           </div>
           <div id="itemShop" class="shop-list"></div>
@@ -138,7 +148,7 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>🧪 Verbrauchsmaterial</h2>
+            <h2>Verbrauchsmaterial</h2>
             <span class="hint">Wasser &amp; Dünger nachfüllen</span>
           </div>
           <div class="consumable-list">
@@ -182,14 +192,23 @@
 
         <div class="panel">
           <div class="panel-header">
-            <h2>🎒 Inventar</h2>
+            <h2>Inventar</h2>
             <span class="hint">Verkaufe Artikel zurück</span>
           </div>
           <div id="inventoryList" class="inventory-list"></div>
         </div>
-      </section>
-
-      <section id="tab-stats" class="tab">
+      </section>      <section id=\"tab-research\" class=\"tab\">
+        <div class=\"panel\">
+          <div class=\"panel-header\">
+            <h2>Forschung</h2>
+            <span class=\"hint\">Verbessere Kernsysteme deiner Farm</span>
+          </div>
+          <div class=\"settings-row\">
+            <div>Verfügbare Punkte: <strong id=\"researchAvailable\">0</strong></div>
+          </div>
+          <div id=\"researchList\" class=\"research-list\"></div>
+        </div>
+      </section><section id="tab-stats" class="tab">
         <div class="panel">
           <div class="panel-header">
             <h2>📊 Statistiken</h2>
@@ -277,16 +296,15 @@
         <div class="nutrients" title="Naehrstofflevel">
           <div class="nutrient-bar" data-nutrient style="width: 0%"></div>
         </div>
-        <div class="plant-quality">Qualitaet: <span data-quality>Normal</span></div>
+                <div class="plant-quality">Qualitaet: <span data-quality>Normal</span></div>
         <div class="plant-actions">
-          <button class="accent" data-harvest>✂️ Ernten</button>
-          <button class="secondary" data-water-btn>💧 Waessern</button>
-          <button class="secondary" data-feed-btn>🧪 Duengen</button>
-          <button class="secondary" data-pest-btn>🛡️ Abwehr</button>
-          <button class="secondary" data-upgrade>⬆️ Upgrade (Kosten: <span data-upgrade-cost>0</span> g)</button>
-          <button class="ghost danger" data-remove>🗑️ Entfernen</button>
-        </div>
-        <div class="floating-container" data-fx></div>
+          <button class="accent" data-harvest>Ernten</button>
+          <button class="secondary" data-water-btn>Wässern</button>
+          <button class="secondary" data-feed-btn>Düngen</button>
+          <button class="secondary" data-pest-btn>Abwehr</button>
+          <button class="secondary" data-upgrade>Upgrade (Kosten: <span data-upgrade-cost>0</span> g)</button>
+          <button class="ghost danger" data-remove>Entfernen</button>
+        </div><div class="floating-container" data-fx></div>
       </div>
     </template>
 
