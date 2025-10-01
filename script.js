@@ -233,7 +233,8 @@
     const strain = getStrain(plant.strainId);
     const base = strain.yield || 10;
     const levelMult = Math.pow(1.12, Math.max(0, plant.level - 1));
-    return base * levelMult * globalMultiplier();
+    const res = researchEffects();
+    return base * levelMult * (1 + (res.yield||0)) * globalMultiplier();
   }
 
   function growTimeFor(plant){
@@ -244,7 +245,8 @@
   function qualityMultiplier(plant){
     const q = clamp(plant.quality || 1, 0.4, 1.5);
     const healthFactor = clamp((plant.health || 100)/100, 0.4, 1.1);
-    return q * healthFactor;
+    const res = researchEffects();
+    return q * (1 + (res.quality||0)) * healthFactor;
   }
 
   function timerForPlant(plant){
@@ -381,6 +383,12 @@
       state.itemsOwned = loaded.itemsOwned || {};
       state.theme = loaded.theme || 'dark';
       state.consumables = loaded.consumables || { water:0, nutrient:0 };
+      state.difficulty = loaded.difficulty || state.difficulty || 'normal';
+      state.research = loaded.research || {};
+      state.reputation = loaded.reputation || 0;
+      state.orders = Array.isArray(loaded.orders) ? loaded.orders : [];
+      state.nextOrderIn = typeof loaded.nextOrderIn === 'number' ? loaded.nextOrderIn : 60;
+      state.qualityPool = loaded.qualityPool || { grams:0, weighted:0 };
       ensureConsumables();
       state.plants.forEach(ensurePlantDefaults);
     }catch(err){
@@ -394,7 +402,8 @@
     const growTime = growTimeFor(plant);
     while(remaining > 0){
       const step = Math.min(remaining, 1);
-      plant.water = clamp(plant.water - WATER_DRAIN_PER_SEC * step, 0, WATER_MAX);
+      const res = researchEffects();
+      plant.water = clamp(plant.water - WATER_DRAIN_PER_SEC * (1 - (res.water||0)) * step, 0, WATER_MAX);
       plant.nutrients = clamp(plant.nutrients - NUTRIENT_DRAIN_PER_SEC * step, 0, NUTRIENT_MAX);
 
       const waterRatio = plant.water / WATER_MAX;
