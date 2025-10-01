@@ -52,6 +52,16 @@
     { id:'sticky_traps', name:'Gelbtafeln', icon:'GT', cost:120, desc:'Reduziert Thripse', effects:{ pestReduce:{ thrips:0.5 } } },
   ];
 
+  // Research (Forschungsbaum)
+  const RESEARCH_NODES = [
+    { id:'bio1', name:'Botanik I', desc:'+10% Ertrag', cost:1, group:'yield', value:0.10, requires:[] },
+    { id:'bio2', name:'Botanik II', desc:'+10% Ertrag', cost:2, group:'yield', value:0.10, requires:['bio1'] },
+    { id:'climate1', name:'Klima I', desc:'+10% Wachstum', cost:1, group:'growth', value:0.10, requires:[] },
+    { id:'process1', name:'Verarbeitung I', desc:'+10% Qualität', cost:1, group:'quality', value:0.10, requires:[] },
+    { id:'auto1', name:'Automatisierung I', desc:'-20% Wasserverbrauch', cost:1, group:'water', value:0.20, requires:[] },
+    { id:'pest1', name:'Schädlingskontrolle I', desc:'-25% Befallsrisiko', cost:1, group:'pest', value:0.25, requires:[] },
+  ];
+
   // Pests
   const PESTS = [
     { id:'mites', name:'Spinnmilben', icon:'🕷️', base: 0.02, effect:{ growth:0.6, health:-2, quality:-0.01 }, prefers:'dry' },
@@ -116,6 +126,12 @@
     difficulty:'normal',
     marketMult:1,
     marketTimer:0,
+    // Research + Orders + Quality pool
+    research:{},
+    reputation:0,
+    orders:[],
+    nextOrderIn:60,
+    qualityPool:{ grams:0, weighted:0 },
     welcomeRewarded:false
   };
 
@@ -689,19 +705,104 @@
     prestigeEls.bonus.textContent = 'x' + (1 + 0.05 * Math.sqrt(state.hazePoints || 0)).toFixed(2);
   }
 
+  // Research UI under its own tab or can be reused elsewhere
+  function researchAvailable(){
+    // simple derivation: 1 point per 500 g lifetime + haze points
+    const totalPoints = Math.floor((state.totalEarned||0) / 500) + (state.hazePoints||0);
+    const spent = RESEARCH_NODES.reduce((s,n)=> s + (state.research?.[n.id] ? n.cost : 0), 0);
+    return Math.max(0, totalPoints - spent);
+  }
+
+  function researchEffects(){
+    const res = state.research || {};
+    const eff = { yield:0, growth:0, quality:0, pest:0, water:0 };
+    for(const n of RESEARCH_NODES){
+      if(res[n.id]){
+        if(n.group==='yield') eff.yield += n.value;
+        if(n.group==='growth') eff.growth += n.value;
+        if(n.group==='quality') eff.quality += n.value;
+        if(n.group==='pest') eff.pest += n.value;
+        if(n.group==='water') eff.water += n.value;
+      }
+    }
+    return eff;
+  }
+
+  function renderResearch(){
+    const wrap = document.getElementById('researchList');
+    const availEl = document.getElementById('researchAvailable');
+    if(availEl) availEl.textContent = String(researchAvailable());
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    const eff = researchEffects();
+    // optional header showing totals
+    const totals = document.createElement('div');
+    totals.className = 'hint';
+    totals.textContent = `Aktive Boni – Ertrag +${Math.round(eff.yield*100)}%, Wachstum +${Math.round(eff.growth*100)}%, Qualität +${Math.round(eff.quality*100)}%, Risiko -${Math.round(eff.pest*100)}%, Wasser -${Math.round(eff.water*100)}%`;
+    wrap.appendChild(totals);
+    for(const node of RESEARCH_NODES){
+      const owned = !!(state.research && state.research[node.id]);
+      const div = document.createElement('div');
+      div.className = 'upgrade';
+      const prereqOk = (node.requires||[]).every(id => state.research?.[id]);
+      div.innerHTML = `
+        <div class="upg-left">
+          <div class="upg-name">${node.name}</div>
+          <div class="upg-level">Kosten ${node.cost} · ${node.desc}</div>
+          <div class="hint">${prereqOk ? '' : 'Benötigt: ' + (node.requires||[]).join(', ')}</div>
+        </div>
+        <button class="secondary" ${owned?'disabled':''} data-research="${node.id}">${owned?'Erforscht':'Freischalten'}</button>
+      `;
+      const btn = div.querySelector('button');
+      if(!owned){
+        btn.disabled = researchAvailable() < node.cost || !prereqOk;
+        btn.addEventListener('click', () => buyResearch(node.id));
+      }
+      wrap.appendChild(div);
+    }
+  }
+
+  function buyResearch(id){
+    const node = RESEARCH_NODES.find(n=>n.id===id);
+    if(!node) return;
+    if(state.research?.[id]) return;
+    const prereqOk = (node.requires||[]).every(r=> state.research?.[r]);
+    if(!prereqOk){ showToast('Voraussetzungen fehlen.'); return; }
+    if(researchAvailable() < node.cost){ showToast('Nicht genug Forschungspunkte.'); return; }
+    state.research = state.research || {};
+    state.research[id] = 1;
+    renderResearch();
+    save();
+  }
+
   function renderTrade(){
     const base = BASE_PRICE_PER_G * (state.marketMult || 1);
     const mult = itemPriceMultiplier();
     if(basePriceEl) basePriceEl.textContent = fmtMoney(base) + '/g';
     if(saleMultEl) saleMultEl.textContent = 'x' + mult.toFixed(2);
-    if(effectivePriceEl) effectivePriceEl.textContent = fmtMoney(base * mult) + '/g';
+    // Quality factor
+    const avgQ = (state.qualityPool.grams||0) > 0 ? (state.qualityPool.weighted/state.qualityPool.grams) : 1;
+    const qMult = saleQualityMultiplier(avgQ);
+    const eff = base * mult * qMult;
+    const qEl = (typeof document !== 'undefined') ? document.getElementById('qualityMult') : null;
+    if(qEl) qEl.textContent = 'x' + qMult.toFixed(2);
+    if(effectivePriceEl) effectivePriceEl.textContent = fmtMoney(eff) + '/g';
     if(sell10Btn) sell10Btn.disabled = state.grams < 10;
     if(sell100Btn) sell100Btn.disabled = state.grams < 100;
     if(sellMaxBtn) sellMaxBtn.disabled = state.grams < 1;
     renderOffers();
+    renderOrders();
     renderItems();
     renderInventory();
     renderConsumables();
+  }
+
+  // Quality-based pricing tiers
+  function saleQualityMultiplier(avgQ){
+    if(!isFinite(avgQ) || avgQ<=0) return 1;
+    if(avgQ >= 1.35) return 1.6;
+    if(avgQ >= 1.15) return 1.25;
+    return 1.0;
   }
 
   function renderOffers(){
@@ -1172,6 +1273,7 @@
     renderStats();
     renderTrade();
     renderSettings();
+    renderResearch();
     if(unlockCostEl) unlockCostEl.textContent = state.slotsUnlocked >= MAX_SLOTS ? 'max' : fmt(slotUnlockCost(state.slotsUnlocked));
   }
 
@@ -1200,6 +1302,7 @@
         if(panel) panel.classList.add('active');
         if(id === 'trade') renderTrade();
         if(id === 'settings') renderSettings();
+        if(id === 'research') renderResearch();
       });
     });
   }
