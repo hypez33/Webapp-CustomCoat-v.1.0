@@ -983,6 +983,10 @@
     const gain = harvestYieldFor(plant) * qualityMultiplier(plant);
     state.grams += gain;
     state.totalEarned += gain;
+    // quality pool update
+    const q = qualityMultiplier(plant);
+    state.qualityPool.grams = (state.qualityPool.grams||0) + gain;
+    state.qualityPool.weighted = (state.qualityPool.weighted||0) + gain * q;
     plant.growProg = 0;
     plant.readyTime = 0;
     plant.water = Math.max(0, plant.water - 10);
@@ -1084,9 +1088,17 @@
     amount = Math.floor(amount);
     if(amount <= 0) return;
     if(state.grams < amount){ showToast('Nicht genug Ertrag.'); return; }
-    const price = BASE_PRICE_PER_G * itemPriceMultiplier();
+    const base = BASE_PRICE_PER_G * (state.marketMult || 1);
+    const itemMult = itemPriceMultiplier();
+    const avgQ = (state.qualityPool.grams||0) > 0 ? (state.qualityPool.weighted/state.qualityPool.grams) : 1;
+    const qMult = saleQualityMultiplier(avgQ);
+    const price = base * itemMult * qMult;
     const cashGain = amount * price;
     state.grams -= amount;
+    // reduce quality pool proportionally
+    const usedWeighted = Math.min(state.qualityPool.weighted||0, avgQ * amount);
+    state.qualityPool.grams = Math.max(0, (state.qualityPool.grams||0) - amount);
+    state.qualityPool.weighted = Math.max(0, (state.qualityPool.weighted||0) - usedWeighted);
     state.cash += cashGain;
     state.totalCashEarned += cashGain;
     state.tradesDone += 1;
@@ -1146,7 +1158,13 @@
     }
     if(state.grams < offer.grams){ showToast('Nicht genug Ertrag fuer diese Anfrage.'); return; }
     state.grams -= offer.grams;
-    const total = offer.grams * offer.pricePerG;
+    const avgQ = (state.qualityPool.grams||0) > 0 ? (state.qualityPool.weighted/state.qualityPool.grams) : 1;
+    const qMult = saleQualityMultiplier(avgQ);
+    const total = offer.grams * offer.pricePerG * qMult;
+    // reduce quality pool proportionally
+    const usedWeighted = Math.min(state.qualityPool.weighted||0, avgQ * offer.grams);
+    state.qualityPool.grams = Math.max(0, (state.qualityPool.grams||0) - offer.grams);
+    state.qualityPool.weighted = Math.max(0, (state.qualityPool.weighted||0) - usedWeighted);
     state.cash += total;
     state.totalCashEarned += total;
     state.tradesDone += 1;
